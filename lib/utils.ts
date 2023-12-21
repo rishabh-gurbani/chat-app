@@ -41,3 +41,20 @@ export function formatDate(input: string | number | Date): string {
     year: 'numeric'
   })
 }
+
+export const formatChat = (c: any, userId?: string) => {
+  return {
+    id: c.conversationId + '',
+    userId: c.userId,
+    title: c.conversation.title,
+    createdAt: c.conversation.createdAt,
+    path: c.conversation.path,
+    sharePath: c.conversation.sharePath,
+    messages: c.conversation.messages.map((m: any) => {
+      return {
+        content: m.content,
+        role: m.userId !== '0' ? 'user' : 'assistant'
+      }
+    })
+  }
+}
