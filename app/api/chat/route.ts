@@ -43,8 +43,8 @@ export async function POST(req: Request) {
         const id = json.id ?? nanoid()
         chat = await createChat(title, id, userId)
       }
-      createMessage(messages[messages.length - 1].content, chat!.id, userId)
-      createMessage(completion, chat!.id, "0")
+      await createMessage(messages[messages.length - 1].content, chat!.id, userId)
+      await createMessage(completion, chat!.id, "0")
     }
   })
 
