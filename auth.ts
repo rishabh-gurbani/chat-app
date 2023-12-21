@@ -26,9 +26,9 @@ export const {
       }
       return token
     },
-    session: ({ session, token }) => {
-      if (session?.user && token?.id) {
-        session.user.id = String(token.id)
+    session: ({ session, user }) => {
+      if (session?.user && user?.id) {
+        session.user.id = String(user.id)
       }
       return session
     },
