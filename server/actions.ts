@@ -27,7 +27,27 @@ export async function getChats(userId?: string | null) {
         }
       }
     })
-    const res = chats.map(c => formatChat(c, userId))
+
+    const sortedChats: typeof chats = [...chats].sort((a, b) => {
+      const aLastMessage = a.conversation.messages.slice(-1)[0]
+      const bLastMessage = b.conversation.messages.slice(-1)[0]
+
+      if (!aLastMessage && !bLastMessage) {
+        return 0
+      }
+
+      if (!aLastMessage) {
+        return 1
+      }
+
+      if (!bLastMessage) {
+        return -1
+      }
+
+      return bLastMessage.createdAt.getTime() - aLastMessage.createdAt.getTime()
+    })
+
+    const res = sortedChats.map(c => formatChat(c, userId))
     return res as Chat[]
   } catch (error) {
     return []
@@ -49,6 +69,11 @@ export async function getChat(id: string, userId: string) {
   if (!chat || (userId && chat.userId !== userId)) {
     return null
   }
+
+  chat.conversation.messages.sort((a, b) => {
+    return a.createdAt.getTime() - b.createdAt.getTime()
+  })
+
   return formatChat(chat, userId)
 }
 
@@ -193,6 +218,38 @@ export async function addUserToConversation(
     conversationId,
     userId
   })
+}
+
+export async function inviteUserToConversation(
+  conversationId: string,
+  inviteeEmail: string
+) {
+  const user = await auth()
+  if (!user) return {status:false, message:'You not logged in'}
+  const users = await db.query.conversationUsersJoin.findMany({
+    columns: {
+      userId: true
+    },
+    where: (c, { eq }) => eq(c.conversationId, conversationId)
+  })
+  const conversationUsers = users.map(user => user.userId)
+  if (!conversationUsers.includes(user.user.id)) {
+    return {status:false, message:'You are not authorised'}
+  }
+
+  const inviteeId = await db.query.users.findFirst({
+    columns: {
+      id: true
+    },
+    where: (u, { eq }) => eq(u.email, inviteeEmail)
+  })
+
+  if (!inviteeId) {
+    return {status:false, message:'User does not exist'}
+  }
+
+  addUserToConversation(conversationId, inviteeId.id)
+  return {status:true, message:'User added succesfully'}
 }
 
 export async function createMessage(

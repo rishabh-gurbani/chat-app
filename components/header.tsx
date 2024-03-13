@@ -1,6 +1,7 @@
 import * as React from 'react'
 import Link from 'next/link'
 
+import { z } from 'zod'
 import { cn } from '@/lib/utils'
 import { auth } from '@/auth'
 import { clearChats } from '@/server/actions'
@@ -20,6 +21,18 @@ import { UserMenu } from '@/components/user-menu'
 import { SidebarMobile } from './sidebar-mobile'
 import { SidebarToggle } from './sidebar-toggle'
 import { ChatHistory } from './chat-history'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 async function UserOrLogin() {
   const session = await auth()
@@ -60,26 +73,11 @@ export function Header() {
           <UserOrLogin />
         </React.Suspense>
       </div>
-      {/* <div className="flex items-center justify-end space-x-2">
-        <a
-          target="_blank"
-          href="https://github.com/vercel/nextjs-ai-chatbot/"
-          rel="noopener noreferrer"
-          className={cn(buttonVariants({ variant: 'outline' }))}
-        >
-          <IconGitHub />
-          <span className="hidden ml-2 md:flex">GitHub</span>
-        </a>
-        <a
-          href="https://github.com/vercel/nextjs-ai-chatbot/"
-          target="_blank"
-          className={cn(buttonVariants())}
-        >
-          <IconVercel className="mr-2" />
-          <span className="hidden sm:block">Deploy to Vercel</span>
-          <span className="sm:hidden">Deploy</span>
-        </a>
-      </div> */}
+      {/* <div className="flex items-center justify-end space-x-2"> */}
+        {/* <React.Suspense fallback={<div className="flex-1 overflow-auto" />}>
+          <AddUserToChat />
+        </React.Suspense> */}
+      {/* </div> */}
     </header>
   )
 }

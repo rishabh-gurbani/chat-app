@@ -22,6 +22,9 @@ export interface ChatPanelProps
   > {
   id?: string
   title?: string
+  sendMessage: (role: string, message: string) => void
+  userTyping?: string | null
+  handleUserTyping: () => void
 }
 
 export function ChatPanel({
@@ -33,7 +36,10 @@ export function ChatPanel({
   reload,
   input,
   setInput,
-  messages
+  messages,
+  sendMessage,
+  userTyping,
+  handleUserTyping
 }: ChatPanelProps) {
   const [shareDialogOpen, setShareDialogOpen] = React.useState(false)
 
@@ -85,8 +91,10 @@ export function ChatPanel({
           )}
         </div>
         <div className="px-4 py-2 space-y-4 border-t shadow-lg bg-background sm:rounded-t-xl sm:border md:py-4">
-          <PromptForm
+          {userTyping && <h6 className="text-xs">{userTyping} is typing</h6>}
+          <PromptForm id={id}
             onSubmit={async value => {
+              sendMessage('user', value)
               await append({
                 id,
                 content: value,
@@ -96,6 +104,7 @@ export function ChatPanel({
             input={input}
             setInput={setInput}
             isLoading={isLoading}
+            handleUserTyping={handleUserTyping}
           />
           <FooterText className="hidden sm:block" />
         </div>

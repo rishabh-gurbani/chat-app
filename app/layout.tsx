@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils'
 import { TailwindIndicator } from '@/components/tailwind-indicator'
 import { Providers } from '@/components/providers'
 import { Header } from '@/components/header'
+import { auth } from '@/auth'
+import { SessionProvider } from 'next-auth/react'
 
 export const metadata = {
   metadataBase: new URL(`https://${process.env.VERCEL_URL}`),
@@ -33,31 +35,36 @@ interface RootLayoutProps {
   children: React.ReactNode
 }
 
-export default function RootLayout({ children }: RootLayoutProps) {
+export default async function RootLayout({ children }: RootLayoutProps) {
+  const session = await auth()
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body
-        className={cn(
-          'font-sans antialiased',
-          GeistSans.variable,
-          GeistMono.variable
-        )}
-      >
-        <Toaster />
-        <Providers
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
+    <SessionProvider session={session}>
+      <html lang="en" suppressHydrationWarning>
+        <body
+          className={cn(
+            'font-sans antialiased',
+            GeistSans.variable,
+            GeistMono.variable
+          )}
         >
-          <div className="flex flex-col min-h-screen">
-            {/* @ts-ignore */}
-            <Header />
-            <main className="flex flex-col flex-1 bg-muted/50">{children}</main>
-          </div>
-          <TailwindIndicator />
-        </Providers>
-      </body>
-    </html>
+          <Toaster />
+          <Providers
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <div className="flex flex-col min-h-screen">
+              {/* @ts-ignore */}
+              <Header />
+              <main className="flex flex-col flex-1 bg-muted/50">
+                {children}
+              </main>
+            </div>
+            <TailwindIndicator />
+          </Providers>
+        </body>
+      </html>
+    </SessionProvider>
   )
 }
