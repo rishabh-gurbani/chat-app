@@ -184,6 +184,24 @@ function IconArrowRight({ className, ...props }: React.ComponentProps<'svg'>) {
   )
 }
 
+function IconToken({ className, ...props }: React.ComponentProps<'svg'>) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 256 256"
+      fill="black"
+      className={cn('h-8 w-8', className)}
+      {...props}
+    >
+      <defs></defs>
+      <g>
+        <path d="M 45 0 C 20.147 0 0 20.147 0 45 c 0 24.853 20.147 45 45 45 s 45 -20.147 45 -45 C 90 20.147 69.853 0 45 0 z M 45 83.5 C 23.737 83.5 6.5 66.263 6.5 45 C 6.5 23.737 23.737 6.5 45 6.5 S 83.5 23.737 83.5 45 C 83.5 66.263 66.263 83.5 45 83.5 z" />
+        <path d="M 49.731 41.74 h -9.462 c -0.959 0 -1.769 -0.81 -1.769 -1.769 V 32.63 c 0 -0.959 0.81 -1.769 1.769 -1.769 h 9.462 c 0.959 0 1.769 0.81 1.769 1.769 h 6 c 0 -4.284 -3.485 -7.769 -7.769 -7.769 H 48 v -5.502 h -6 v 5.502 h -1.731 c -4.284 0 -7.769 3.485 -7.769 7.769 v 7.341 c 0 4.284 3.485 7.769 7.769 7.769 v 0.001 h 9.462 c 0.959 0 1.769 0.81 1.769 1.769 v 7.341 c 0 0.959 -0.81 1.77 -1.769 1.77 h -9.462 c -0.959 0 -1.769 -0.811 -1.769 -1.77 h -6 c 0 4.284 3.485 7.77 7.769 7.77 H 42 v 5.502 h 6 v -5.502 h 1.731 c 4.283 0 7.769 -3.485 7.769 -7.77 v -7.341 C 57.5 45.225 54.015 41.74 49.731 41.74 z" />
+      </g>
+    </svg>
+  )
+}
+
 function IconUser({ className, ...props }: React.ComponentProps<'svg'>) {
   return (
     <svg
@@ -503,5 +521,6 @@ export {
   IconShare,
   IconUsers,
   IconExternalLink,
-  IconChevronUpDown
+  IconChevronUpDown,
+  IconToken
 }

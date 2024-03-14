@@ -68,7 +68,8 @@ export const conversations = pgTable('conversation', {
   title: varchar('title').notNull().default(''),
   sharePath: text('sharePath'),
   path: text('path').notNull().default(''),
-  createdAt: timestamp('createdAt').notNull().defaultNow()
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt').notNull().defaultNow()
 })
 
 export const conversationUsersJoin = pgTable(
@@ -82,7 +83,8 @@ export const conversationUsersJoin = pgTable(
       .references(() => users.id),
     status: varchar('status', { enum: ['accepted', 'pending'] })
       .notNull()
-      .default('pending')
+      .default('pending'),
+    conversationUpdatedAt: timestamp('conversationUpdatedAt').notNull().defaultNow()
   },
   join => {
     return {
@@ -156,3 +158,76 @@ export const conversationUsersJoinRelations = relations(
     }
   }
 )
+export const archivedConversations = pgTable('archivedConversations', {
+  id: varchar('id').notNull().primaryKey(),
+  title: varchar('title').notNull().default(''),
+  sharePath: text('sharePath'),
+  path: text('path').notNull().default(''),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt').notNull().defaultNow()
+})
+
+export const archivedMessages = pgTable(
+  'archivedMessages',
+  {
+    id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
+    content: text('content').notNull().default(''),
+    conversationId: varchar('conversationId')
+      .notNull()
+      .references(() => archivedConversations.id, { onDelete: 'cascade' }),
+    userId: text('userId')
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp('createdAt').notNull().defaultNow()
+  },
+  message => {
+    return {
+      userMsgIdx: index('userMsgIdxA').on(message.userId),
+      conversationIdx: index('conversationIdxA').on(message.conversationId)
+    }
+  }
+)
+
+export const archivedConversationUsersJoin = pgTable(
+  'archivedConversationUsersJoin',
+  {
+    conversationId: varchar('conversationId')
+      .notNull()
+      .references(() => archivedConversations.id, { onDelete: 'cascade' }),
+    userId: text('userId')
+      .notNull()
+      .references(() => users.id),
+    status: varchar('status', { enum: ['accepted', 'pending'] })
+      .notNull()
+      .default('pending'),
+    conversationUpdatedAt: timestamp('conversationUpdatedAt').notNull().defaultNow()
+  },
+  join => {
+    return {
+      pk: primaryKey({ columns: [join.conversationId, join.userId] }),
+      convoIdx: index('convoIdxA').on(join.conversationId),
+      userIdx: index('userIdxA').on(join.userId)
+    }
+  }
+)
+
+export const archivedConversationRelations = relations(archivedConversations, ({ many }) => {
+  return {
+    users: many(archivedConversationUsersJoin),
+    messages: many(archivedMessages) // one to many
+  }
+})
+
+export const archivedMessageRelations = relations(archivedMessages, ({ one }) => {
+  return {
+    conversation: one(archivedConversations, {
+      fields: [archivedMessages.conversationId],
+      references: [archivedConversations.id]
+    }), // one to one
+    user: one(users, {
+      fields: [archivedMessages.userId],
+      references: [users.id]
+    }) // one to one
+  }
+})
+

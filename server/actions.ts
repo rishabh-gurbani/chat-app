@@ -7,8 +7,16 @@ import { db } from './db'
 import { auth } from '@/auth'
 import { type Chat } from '@/lib/types'
 import { formatChat } from '@/lib/utils'
-import { conversationUsersJoin, conversations, messages } from './db/schema'
-import { and, eq, inArray } from 'drizzle-orm'
+import {
+  archivedConversationUsersJoin,
+  archivedConversations,
+  archivedMessages,
+  conversationRelations,
+  conversationUsersJoin,
+  conversations,
+  messages
+} from './db/schema'
+import { and, desc, eq, inArray, lt } from 'drizzle-orm'
 
 export async function getChats(userId?: string | null) {
   if (!userId) {
@@ -25,29 +33,11 @@ export async function getChats(userId?: string | null) {
             messages: true
           }
         }
-      }
+      },
+      orderBy: [desc(conversationUsersJoin.conversationUpdatedAt)]
     })
 
-    const sortedChats: typeof chats = [...chats].sort((a, b) => {
-      const aLastMessage = a.conversation.messages.slice(-1)[0]
-      const bLastMessage = b.conversation.messages.slice(-1)[0]
-
-      if (!aLastMessage && !bLastMessage) {
-        return 0
-      }
-
-      if (!aLastMessage) {
-        return 1
-      }
-
-      if (!bLastMessage) {
-        return -1
-      }
-
-      return bLastMessage.createdAt.getTime() - aLastMessage.createdAt.getTime()
-    })
-
-    const res = sortedChats.map(c => formatChat(c, userId))
+    const res = chats.map(c => formatChat(c, userId))
     return res as Chat[]
   } catch (error) {
     return []
@@ -225,7 +215,7 @@ export async function inviteUserToConversation(
   inviteeEmail: string
 ) {
   const user = await auth()
-  if (!user) return {status:false, message:'You not logged in'}
+  if (!user) return { status: false, message: 'You not logged in' }
   const users = await db.query.conversationUsersJoin.findMany({
     columns: {
       userId: true
@@ -234,7 +224,7 @@ export async function inviteUserToConversation(
   })
   const conversationUsers = users.map(user => user.userId)
   if (!conversationUsers.includes(user.user.id)) {
-    return {status:false, message:'You are not authorised'}
+    return { status: false, message: 'You are not authorised' }
   }
 
   const inviteeId = await db.query.users.findFirst({
@@ -245,11 +235,11 @@ export async function inviteUserToConversation(
   })
 
   if (!inviteeId) {
-    return {status:false, message:'User does not exist'}
+    return { status: false, message: 'User does not exist' }
   }
 
   addUserToConversation(conversationId, inviteeId.id)
-  return {status:true, message:'User added succesfully'}
+  return { status: true, message: 'User added succesfully' }
 }
 
 export async function createMessage(
@@ -257,9 +247,87 @@ export async function createMessage(
   chatId: string,
   userId: string
 ) {
-  await db.insert(messages).values({
-    content,
-    conversationId: chatId,
-    userId
+  const date = new Date()
+  await db
+    .insert(messages)
+    .values({
+      content,
+      conversationId: chatId,
+      userId,
+      createdAt: date
+    })
+    .returning()
+
+  await db
+    .update(conversations)
+    .set({ updatedAt: date })
+    .where(eq(conversations.id, chatId))
+
+  await db
+    .update(conversationUsersJoin)
+    .set({ conversationUpdatedAt: date })
+    .where(eq(conversationUsersJoin.conversationId, chatId))
+
+  // await Promise.all([
+  //   insertMessagePromise,
+  //   updateConversationPromise,
+  //   updateConversationUserPromise
+  // ])
+}
+
+export async function getTokenBalance() {
+  const user = await auth()
+  const id = user?.user.id
+  if (!id) {
+    return null
+  }
+  const tokens = await db.query.users.findFirst({
+    where: (u, { eq }) => eq(u.id, id),
+    columns: {
+      credits: true
+    }
   })
+  return tokens
+}
+
+export async function archiveExpiredConversations() {
+  // await db.transaction(async tx => {
+  const nowDate = new Date()
+
+  const toArchive = await db.query.conversations.findMany({
+    where: (c, { lt }) =>
+      lt(c.updatedAt, new Date(nowDate.getTime() - 1 * 30 * 1000))
+  })
+
+  const ids = toArchive.map(c => c.id)
+
+  const expiredConversationUserJoins = await db
+    .delete(conversationUsersJoin)
+    .where(inArray(conversationUsersJoin.conversationId, ids))
+    .returning()
+
+  const expiredMessages = await db
+    .delete(messages)
+    .where(inArray(messages.conversationId, ids))
+    .returning()
+
+  console.log(expiredConversationUserJoins)
+
+  console.log(expiredMessages)
+
+  const expiredConversations = await db
+    .delete(conversations)
+    .where(
+      lt(conversations.updatedAt, new Date(nowDate.getTime() - 1 * 1 * 1000))
+    )
+    .returning()
+
+  await db.insert(archivedConversations).values(expiredConversations)
+  await db.insert(archivedMessages).values(expiredMessages)
+  await db
+    .insert(archivedConversationUsersJoin)
+    .values(expiredConversationUserJoins)
+
+  return ids
+  // })
 }

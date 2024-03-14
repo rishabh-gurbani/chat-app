@@ -23,6 +23,7 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { toast } from 'react-hot-toast'
 import { usePathname, useRouter } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 
 const IS_PREVIEW = process.env.VERCEL_ENV === 'preview'
 export interface ChatProps extends React.ComponentProps<'div'> {
@@ -70,6 +71,9 @@ export function Chat({ id, initialMessages, className }: ChatProps) {
         toast.error(response.statusText)
       }
     },
+    onError: err => {
+      toast.error(err.message)
+    },
     onFinish(message) {
       sendMessage('assistant', message.content)
 
@@ -77,6 +81,10 @@ export function Chat({ id, initialMessages, className }: ChatProps) {
         router.push(`/chat/${id}`, { shallow: true, scroll: false })
         router.refresh()
       }
+      // router.refresh()
+      // else {
+      //   revalidatePath(`/chat/${id}`)
+      // }
     }
   })
 
@@ -88,28 +96,51 @@ export function Chat({ id, initialMessages, className }: ChatProps) {
     },
     [socket]
   )
+  console.log('re-rendering')
+  useEffect(() => {
+    const establishConnection = async () => {
+      console.log('refreshing')
+      const res = await fetch('/api/authtoken')
+      const { token } = await res.json()
+
+      const Socket = io('http://localhost:3001', {
+        query: { token }
+      })
+      setSocket(Socket)
+
+      Socket.on('connect', () => {
+        // console.log('connected')
+      })
+
+      Socket.on('disconnect', () => {
+        // console.log('disconnected')
+      })
+
+      const userName = session?.user.name // Get the user's name from your application state or an input field
+      const roomId = id // Get the room ID from your application state or a URL parameter
+      Socket.emit('join', { userName, roomId })
+      return () => {
+        Socket.disconnect()
+      }
+    }
+    establishConnection()
+    // Clean up function
+  }, [id, session])
 
   useEffect(() => {
-    const Socket = io('http://localhost:3001')
-    setSocket(Socket)
+    const Socket = socket // Get the socket instance from the previous effect
 
-    Socket.on('connect', () => {
-      // console.log('connected')
-    })
-
-    Socket.on('disconnect', () => {
-      // console.log('disconnected')
-    })
-
-    const userName = session?.user.name // Get the user's name from your application state or an input field
-    const roomId = id // Get the room ID from your application state or a URL parameter
-    Socket.emit('join', { userName, roomId })
-
-    // Clean up function
-    return () => {
-      Socket.disconnect()
+    if (Socket) {
+      Socket.on('refresh', () => {
+        console.log('incoming')
+        toast('The chat has expired', {
+          icon: '⏳'
+        })
+        router.replace('/')
+        router.refresh()
+      })
     }
-  }, [id, session])
+  })
 
   useEffect(() => {
     const Socket = socket // Get the socket instance from the previous effect

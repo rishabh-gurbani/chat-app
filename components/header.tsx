@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { z } from 'zod'
 import { cn } from '@/lib/utils'
 import { auth } from '@/auth'
-import { clearChats } from '@/server/actions'
+import { clearChats, getTokenBalance } from '@/server/actions'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Sidebar } from '@/components/sidebar'
 import { SidebarList } from '@/components/sidebar-list'
@@ -12,6 +12,7 @@ import {
   IconGitHub,
   IconNextChat,
   IconSeparator,
+  IconToken,
   IconVercel
 } from '@/components/ui/icons'
 import { SidebarFooter } from '@/components/sidebar-footer'
@@ -33,6 +34,13 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+// import { getTokenBalance } from '@/server/actions'
+import {
+  QueryClient,
+  HydrationBoundary,
+  dehydrate
+} from '@tanstack/react-query'
+import { TokenBalance } from './token-balance'
 
 async function UserOrLogin() {
   const session = await auth()
@@ -65,6 +73,31 @@ async function UserOrLogin() {
   )
 }
 
+async function Balance() {
+  const queryClient = new QueryClient()
+
+  await queryClient.prefetchQuery({
+    queryKey: ['balance'],
+    queryFn: getTokenBalance
+  })
+
+  return (
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <TokenBalance />
+    </HydrationBoundary>
+  )
+}
+
+async function TotalBalance() {
+  const balance = await getTokenBalance()
+  return (
+    <span className="mr-8 text-sm">
+      <span className="font-bold mr-2">Balance: </span>{' '}
+      {balance ? balance.credits.toFixed(3) : 0.0}
+    </span>
+  )
+}
+
 export function Header() {
   return (
     <header className="sticky top-0 z-50 flex items-center justify-between w-full h-16 px-4 border-b shrink-0 bg-gradient-to-b from-background/10 via-background/50 to-background/80 backdrop-blur-xl">
@@ -73,11 +106,12 @@ export function Header() {
           <UserOrLogin />
         </React.Suspense>
       </div>
-      {/* <div className="flex items-center justify-end space-x-2"> */}
-        {/* <React.Suspense fallback={<div className="flex-1 overflow-auto" />}>
-          <AddUserToChat />
-        </React.Suspense> */}
-      {/* </div> */}
+      <div className="flex items-center justify-end space-x-2">
+        <React.Suspense fallback={<div className="flex-1 overflow-auto" />}>
+          <Balance />
+        </React.Suspense>
+        {/* <TotalBalance /> */}
+      </div>
     </header>
   )
 }
